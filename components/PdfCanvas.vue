@@ -16,7 +16,11 @@
     <!-- Zoom spacer: sets layout size = canvas × zoomLevel so overflow-auto scrolls correctly -->
     <div :style="zoomSpacerStyle">
       <!-- Actual canvas wrapper: CSS-scaled for visual zoom -->
-      <div ref="canvasWrapperRef" class="panel absolute top-0 left-0 shadow-xl" :style="scaledWrapperStyle">
+      <div
+        ref="canvasWrapperRef"
+        class="panel absolute top-0 left-0 shadow-xl"
+        :style="scaledWrapperStyle"
+      >
         <!-- Layer 1: pdf.js render target -->
         <canvas ref="pdfCanvasRef" class="block" />
 
@@ -200,6 +204,16 @@ watch(
       active.set('fontSize', size);
       fabricCanvas.renderAll();
       syncToStore(store.currentPage);
+    }
+  },
+);
+
+// Update the free-drawing brush width when the brush size changes
+watch(
+  () => store.activeBrushSize,
+  (size) => {
+    if (fabricCanvas?.isDrawingMode && fabricCanvas.freeDrawingBrush) {
+      fabricCanvas.freeDrawingBrush.width = size;
     }
   },
 );
@@ -495,7 +509,7 @@ function applyToolMode(tool: string) {
       fabricCanvas.isDrawingMode = true;
       const brush = fabricCanvas.freeDrawingBrush;
       brush.color = tool === 'signature' ? '#111827' : store.activeColor;
-      brush.width = tool === 'signature' ? 3 : 2;
+      brush.width = tool === 'signature' ? store.activeBrushSize : store.activeBrushSize;
       break;
     }
     case 'erase': {

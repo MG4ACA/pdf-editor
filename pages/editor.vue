@@ -35,9 +35,18 @@
               <span class="text-xs text-gray-400">Click on canvas to place text</span>
             </template>
 
-            <!-- Draw hint -->
-            <template v-if="store.activeTool === 'draw'">
-              <span class="text-xs text-gray-400">Draw freely on the canvas</span>
+            <!-- Draw / Signature brush size -->
+            <template v-if="store.activeTool === 'draw' || store.activeTool === 'signature'">
+              <label class="text-xs text-gray-500">Brush</label>
+              <input
+                type="range"
+                min="1"
+                max="40"
+                :value="store.activeBrushSize"
+                class="w-24 accent-brand-600"
+                @input="store.setActiveBrushSize(Number(($event.target as HTMLInputElement).value))"
+              />
+              <span class="w-6 text-center text-xs text-gray-600">{{ store.activeBrushSize }}</span>
             </template>
 
             <!-- Erase hint -->
@@ -45,9 +54,53 @@
               <span class="text-xs text-gray-400">Click an object to delete it</span>
             </template>
 
-            <!-- Signature hint -->
-            <template v-if="store.activeTool === 'signature'">
-              <span class="text-xs text-gray-400">Draw your signature on the canvas</span>
+            <!-- Zoom controls -->
+            <template v-if="store.hasDocument">
+              <div class="mx-2 h-5 w-px bg-gray-200" />
+              <button
+                class="flex h-6 w-6 items-center justify-center rounded hover:bg-gray-100 disabled:opacity-40"
+                :disabled="store.zoomLevel <= 0.25"
+                title="Zoom out (Ctrl+Scroll)"
+                @click="store.zoomOut()"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                >
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              </button>
+              <button
+                class="w-14 rounded border border-gray-200 px-1.5 py-0.5 text-center text-xs hover:bg-gray-50"
+                title="Reset zoom"
+                @click="store.resetZoom()"
+              >
+                {{ Math.round(store.zoomLevel * 100) }}%
+              </button>
+              <button
+                class="flex h-6 w-6 items-center justify-center rounded hover:bg-gray-100 disabled:opacity-40"
+                :disabled="store.zoomLevel >= 4"
+                title="Zoom in (Ctrl+Scroll)"
+                @click="store.zoomIn()"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                >
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              </button>
             </template>
           </div>
         </div>
@@ -139,41 +192,6 @@
               @error="(msg) => (errorMessage = msg)"
             />
           </ClientOnly>
-        </div>
-
-        <!-- Bottom zoom bar -->
-        <div
-          v-if="store.hasDocument"
-          class="flex h-9 items-center justify-end gap-2 border-t border-gray-200 bg-white px-4 text-xs text-gray-600"
-        >
-          <button
-            class="flex h-6 w-6 items-center justify-center rounded hover:bg-gray-100 disabled:opacity-40"
-            :disabled="store.zoomLevel <= 0.25"
-            title="Zoom out (Ctrl+-)"
-            @click="store.zoomOut()"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </button>
-          <button
-            class="w-14 rounded border border-gray-200 px-1.5 py-0.5 text-center hover:bg-gray-50"
-            title="Reset zoom"
-            @click="store.resetZoom()"
-          >
-            {{ Math.round(store.zoomLevel * 100) }}%
-          </button>
-          <button
-            class="flex h-6 w-6 items-center justify-center rounded hover:bg-gray-100 disabled:opacity-40"
-            :disabled="store.zoomLevel >= 4"
-            title="Zoom in (Ctrl++)"
-            @click="store.zoomIn()"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </button>
         </div>
       </main>
 

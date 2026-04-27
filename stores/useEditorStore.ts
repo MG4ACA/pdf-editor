@@ -52,6 +52,9 @@ export const useEditorStore = defineStore('editor', {
     // Active font size for text tool
     activeFontSize: 16,
 
+    // Brush size for draw / signature tools (1–40 px)
+    activeBrushSize: 3,
+
     // Canvas render scale (2x for high-DPI)
     renderScale: 2.0,
 
@@ -125,6 +128,10 @@ export const useEditorStore = defineStore('editor', {
 
     setActiveFontSize(size: number) {
       this.activeFontSize = size;
+    },
+
+    setActiveBrushSize(size: number) {
+      this.activeBrushSize = Math.max(1, Math.min(40, size));
     },
 
     // -----------------------------------------------------------------------
