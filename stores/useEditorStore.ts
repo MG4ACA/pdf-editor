@@ -59,6 +59,9 @@ export const useEditorStore = defineStore('editor', {
     _past: [] as HistoryEntry[],
     _future: [] as HistoryEntry[],
 
+    // Incremented on every undo/redo so PdfCanvas can watch only those changes
+    _undoRedoVersion: 0,
+
     // UI state
     isLoading: false,
     loadingMessage: '',
@@ -158,9 +161,9 @@ export const useEditorStore = defineStore('editor', {
     /**
      * Bulk-replace all annotations for a given page.
      * Called when Fabric.js fires a canvas modification event.
+     * NOTE: snapshot is taken by the caller before invoking this.
      */
     syncAnnotationsForPage(page: number, objects: AnnotationObject[]) {
-      this._snapshot();
       this.annotations = [
         ...this.annotations.filter((a) => a.page !== page),
         ...objects.map((o) => ({ ...o, page })),
@@ -176,6 +179,7 @@ export const useEditorStore = defineStore('editor', {
       this._future.push({ annotations: JSON.parse(JSON.stringify(this.annotations)) });
       const prev = this._past.pop()!;
       this.annotations = prev.annotations;
+      this._undoRedoVersion++;
     },
 
     redo() {
@@ -183,6 +187,7 @@ export const useEditorStore = defineStore('editor', {
       this._past.push({ annotations: JSON.parse(JSON.stringify(this.annotations)) });
       const next = this._future.pop()!;
       this.annotations = next.annotations;
+      this._undoRedoVersion++;
     },
 
     // -----------------------------------------------------------------------

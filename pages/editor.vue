@@ -3,7 +3,13 @@
   <ClientOnly>
     <div class="flex h-full w-full overflow-hidden">
       <!-- Left: Toolbar -->
-      <EditorToolbar @file-selected="onFileSelected" @ocr="runOcr" @save="savePdf" />
+      <EditorToolbar
+        @file-selected="onFileSelected"
+        @ocr="runOcr"
+        @save="savePdf"
+        @undo="undoAction"
+        @redo="redoAction"
+      />
 
       <!-- Centre: Canvas area -->
       <main class="relative flex flex-1 flex-col overflow-hidden">
@@ -254,14 +260,24 @@ async function savePdf() {
 
 // ─── Keyboard shortcuts ───────────────────────────────────────────────────────
 
+async function undoAction() {
+  store.undo();
+  await pdfCanvasRef.value?.reloadFromStore();
+}
+
+async function redoAction() {
+  store.redo();
+  await pdfCanvasRef.value?.reloadFromStore();
+}
+
 function onKeyDown(e: KeyboardEvent) {
   if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
     e.preventDefault();
-    store.undo();
+    undoAction();
   }
   if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
     e.preventDefault();
-    store.redo();
+    redoAction();
   }
   if ((e.ctrlKey || e.metaKey) && e.key === 's') {
     e.preventDefault();

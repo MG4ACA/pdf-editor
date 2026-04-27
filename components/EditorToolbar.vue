@@ -88,13 +88,13 @@
     <div class="flex-1" />
 
     <!-- Undo -->
-    <button class="tool-btn" :disabled="!store.canUndo" title="Undo (Ctrl+Z)" @click="store.undo()">
+    <button class="tool-btn" :disabled="!store.canUndo" title="Undo (Ctrl+Z)" @click="emit('undo')">
       <IconUndo class="h-5 w-5" />
       <span>Undo</span>
     </button>
 
     <!-- Redo -->
-    <button class="tool-btn" :disabled="!store.canRedo" title="Redo (Ctrl+Y)" @click="store.redo()">
+    <button class="tool-btn" :disabled="!store.canRedo" title="Redo (Ctrl+Y)" @click="emit('redo')">
       <IconRedo class="h-5 w-5" />
       <span>Redo</span>
     </button>
@@ -121,6 +121,8 @@ const emit = defineEmits<{
   (e: 'file-selected', file: File): void;
   (e: 'ocr'): void;
   (e: 'save'): void;
+  (e: 'undo'): void;
+  (e: 'redo'): void;
 }>();
 
 function onFileChange(event: Event) {

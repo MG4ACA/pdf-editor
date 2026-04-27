@@ -99,6 +99,9 @@ let pdfDoc: PdfDocumentProxy | null = null;
 let fabricModule: FabricLib | null = null;
 let fabricCanvas: InstanceType<FabricLib['Canvas']> | null = null;
 
+// When true, syncToStore calls skip snapshotting (used during undo/redo canvas rebuild)
+let _isSyncing = false;
+
 // Rendered canvas dimensions at CSS pixels (not device pixels)
 const canvasWidth = ref(0);
 const canvasHeight = ref(0);
@@ -274,9 +277,18 @@ async function initFabricCanvas(cssWidth: number, cssHeight: number, page: numbe
     }
 
     // Persist changes to Pinia store whenever the canvas is modified
-    fabricCanvas.on('object:modified', () => syncToStore(page));
-    fabricCanvas.on('object:added', () => syncToStore(page));
-    fabricCanvas.on('object:removed', () => syncToStore(page));
+    fabricCanvas.on('object:modified', () => {
+      store._snapshot();
+      syncToStore(page);
+    });
+    fabricCanvas.on('object:added', () => {
+      store._snapshot();
+      syncToStore(page);
+    });
+    fabricCanvas.on('object:removed', () => {
+      store._snapshot();
+      syncToStore(page);
+    });
   }
 
   // Re-hydrate saved annotations for this page
@@ -300,6 +312,7 @@ async function initFabricCanvas(cssWidth: number, cssHeight: number, page: numbe
 
 function syncToStore(page: number) {
   if (!fabricCanvas) return;
+  _isSyncing = true;
   const objects = fabricCanvas.getObjects();
   const annotations: AnnotationObject[] = objects.map((obj) => ({
     id: ((obj as Record<string, unknown>).annotationId as string) ?? crypto.randomUUID(),
@@ -310,6 +323,45 @@ function syncToStore(page: number) {
     createdAt: Date.now(),
   }));
   store.syncAnnotationsForPage(page, annotations);
+  _isSyncing = false;
+}
+
+/** Reload the fabric canvas objects from the current store annotations (used by undo/redo) */
+async function reloadCanvasAnnotations(page: number) {
+  if (!fabricCanvas || !fabricModule) return;
+  _isSyncing = true;
+  fabricCanvas.off('object:added');
+  fabricCanvas.off('object:modified');
+  fabricCanvas.off('object:removed');
+  fabricCanvas.clear();
+  const saved = store.annotations.filter((a) => a.page === page);
+  for (const annotation of saved) {
+    await new Promise<void>((resolve) => {
+      fabricModule!.util.enlivenObjects(
+        [annotation.fabricJson],
+        (objects: fabric.Object[]) => {
+          objects.forEach((obj) => fabricCanvas!.add(obj));
+          resolve();
+        },
+        'fabric',
+      );
+    });
+  }
+  fabricCanvas.renderAll();
+  // Re-attach event listeners
+  fabricCanvas.on('object:modified', () => {
+    store._snapshot();
+    syncToStore(page);
+  });
+  fabricCanvas.on('object:added', () => {
+    store._snapshot();
+    syncToStore(page);
+  });
+  fabricCanvas.on('object:removed', () => {
+    store._snapshot();
+    syncToStore(page);
+  });
+  _isSyncing = false;
 }
 
 // ─── Tool mode application ───────────────────────────────────────────────────
@@ -437,8 +489,13 @@ function exportAsImage(): string {
   return fabricCanvas?.toDataURL({ format: 'png', multiplier: 2 }) ?? '';
 }
 
+/** Reload canvas from store annotations (called by parent after undo/redo) */
+async function reloadFromStore(): Promise<void> {
+  await reloadCanvasAnnotations(store.currentPage);
+}
+
 // Expose to parent
-defineExpose({ addText, beginSignature, eraseSelected, exportAsImage });
+defineExpose({ addText, beginSignature, eraseSelected, exportAsImage, reloadFromStore });
 
 // ─── Backend event logging ───────────────────────────────────────────────────
 
