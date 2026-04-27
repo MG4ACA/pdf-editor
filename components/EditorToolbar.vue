@@ -36,15 +36,41 @@
       @click="handleTool('draw')"
     />
 
-    <!-- Signature tool -->
-    <ToolButton
-      icon="signature"
-      label="Sign"
-      tool="signature"
-      :active="store.activeTool === 'signature'"
-      :disabled="!store.hasDocument"
-      @click="handleTool('signature')"
-    />
+    <!-- Signature tool with draw/upload popup -->
+    <div class="relative">
+      <ToolButton
+        icon="signature"
+        label="Sign"
+        tool="signature"
+        :active="store.activeTool === 'signature' || showSignaturePanel"
+        :disabled="!store.hasDocument"
+        @click="showSignaturePanel = !showSignaturePanel"
+      />
+      <!-- Signature popup -->
+      <div
+        v-if="showSignaturePanel"
+        class="absolute left-full top-0 z-50 ml-2 w-44 rounded-lg border border-gray-200 bg-white p-2 shadow-xl"
+      >
+        <p class="mb-1.5 text-xs font-semibold text-gray-700">Signature</p>
+        <button
+          class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs text-gray-700 hover:bg-gray-100"
+          @click="chooseDraw"
+        >
+          ✏️ Draw freehand
+        </button>
+        <label
+          class="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs text-gray-700 hover:bg-gray-100"
+        >
+          🖼️ Upload image
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/jpg"
+            class="sr-only"
+            @change="onSignatureImageChange"
+          />
+        </label>
+      </div>
+    </div>
 
     <!-- Erase tool -->
     <ToolButton
@@ -113,6 +139,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from 'vue';
 import type { ToolMode } from '~/stores/useEditorStore';
 import { useEditorStore } from '~/stores/useEditorStore';
 
@@ -123,6 +150,7 @@ const emit = defineEmits<{
   (e: 'save'): void;
   (e: 'undo'): void;
   (e: 'redo'): void;
+  (e: 'signature-image', dataUrl: string): void;
 }>();
 
 function onFileChange(event: Event) {
@@ -135,5 +163,34 @@ function onFileChange(event: Event) {
 
 function handleTool(tool: ToolMode) {
   store.setActiveTool(tool);
+}
+
+const showSignaturePanel = ref(false);
+
+// Close the signature panel whenever the active tool changes away from signature
+watch(
+  () => store.activeTool,
+  (tool) => {
+    if (tool !== 'signature') showSignaturePanel.value = false;
+  },
+);
+
+function chooseDraw() {
+  showSignaturePanel.value = false;
+  handleTool('signature');
+}
+
+function onSignatureImageChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target?.result as string;
+    if (dataUrl) emit('signature-image', dataUrl);
+  };
+  reader.readAsDataURL(file);
+  showSignaturePanel.value = false;
+  input.value = '';
 }
 </script>

@@ -9,6 +9,7 @@
         @save="savePdf"
         @undo="undoAction"
         @redo="redoAction"
+        @signature-image="onSignatureImage"
       />
 
       <!-- Centre: Canvas area -->
@@ -234,12 +235,17 @@ function onCanvasReady() {
 async function runOcr() {
   if (!pdfCanvasRef.value) return;
   showOcrPanel.value = true;
-  const dataUrl = pdfCanvasRef.value.exportAsImage();
+  // Use the PDF page canvas (not the annotation overlay) for accurate OCR
+  const dataUrl = pdfCanvasRef.value.exportPdfPageAsImage();
   if (!dataUrl) {
     errorMessage.value = 'Nothing to OCR — render a page first.';
     return;
   }
   await recognise(dataUrl);
+}
+
+async function onSignatureImage(dataUrl: string) {
+  await pdfCanvasRef.value?.addSignatureImage(dataUrl);
 }
 
 function copyOcr() {

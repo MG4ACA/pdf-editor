@@ -139,8 +139,12 @@ watch(
 
 watch(
   () => store.currentPage,
-  async (page) => {
-    if (pdfDoc) await renderPage(page);
+  async (newPage, oldPage) => {
+    if (pdfDoc) {
+      // Flush any pending canvas changes for the page we are leaving
+      if (fabricCanvas && oldPage) syncToStore(oldPage);
+      await renderPage(newPage);
+    }
   },
 );
 
@@ -148,6 +152,43 @@ watch(
   () => store.activeTool,
   (tool) => {
     applyToolMode(tool);
+  },
+);
+
+// Update the selected object's colour when the colour picker changes
+watch(
+  () => store.activeColor,
+  (color) => {
+    if (!fabricCanvas) return;
+    const active = fabricCanvas.getActiveObject();
+    if (active) {
+      store._snapshot();
+      if (active.type === 'i-text' || active.type === 'text') {
+        active.set('fill', color);
+      } else {
+        active.set('stroke', color);
+      }
+      fabricCanvas.renderAll();
+      syncToStore(store.currentPage);
+    }
+    if (fabricCanvas.isDrawingMode && fabricCanvas.freeDrawingBrush) {
+      fabricCanvas.freeDrawingBrush.color = color;
+    }
+  },
+);
+
+// Update the selected text object's font size when the font size selector changes
+watch(
+  () => store.activeFontSize,
+  (size) => {
+    if (!fabricCanvas) return;
+    const active = fabricCanvas.getActiveObject();
+    if (active && (active.type === 'i-text' || active.type === 'text')) {
+      store._snapshot();
+      active.set('fontSize', size);
+      fabricCanvas.renderAll();
+      syncToStore(store.currentPage);
+    }
   },
 );
 
@@ -253,7 +294,11 @@ async function initFabricCanvas(cssWidth: number, cssHeight: number, page: numbe
   if (!fabricCanvasRef.value || !fabricModule) return;
 
   if (fabricCanvas) {
-    // Resize + clear existing instance
+    // Remove stale listeners before clearing so they don't fire syncToStore
+    // with the old closed-over page number.
+    fabricCanvas.off('object:added');
+    fabricCanvas.off('object:modified');
+    fabricCanvas.off('object:removed');
     fabricCanvas.setDimensions({ width: cssWidth, height: cssHeight });
     fabricCanvas.clear();
   } else {
@@ -275,23 +320,9 @@ async function initFabricCanvas(cssWidth: number, cssHeight: number, page: numbe
       fabricContainer.style.width = '100%';
       fabricContainer.style.height = '100%';
     }
-
-    // Persist changes to Pinia store whenever the canvas is modified
-    fabricCanvas.on('object:modified', () => {
-      store._snapshot();
-      syncToStore(page);
-    });
-    fabricCanvas.on('object:added', () => {
-      store._snapshot();
-      syncToStore(page);
-    });
-    fabricCanvas.on('object:removed', () => {
-      store._snapshot();
-      syncToStore(page);
-    });
   }
 
-  // Re-hydrate saved annotations for this page
+  // Re-hydrate saved annotations (no listeners attached yet – safe to add objects)
   const saved = store.annotations.filter((a) => a.page === page);
   for (const annotation of saved) {
     await new Promise<void>((resolve) => {
@@ -307,6 +338,25 @@ async function initFabricCanvas(cssWidth: number, cssHeight: number, page: numbe
   }
 
   fabricCanvas.renderAll();
+
+  // Attach listeners AFTER rehydration; use store.currentPage dynamically so
+  // navigating pages always syncs to the correct page number.
+  fabricCanvas.on('object:modified', () => {
+    if (_isSyncing) return;
+    store._snapshot();
+    syncToStore(store.currentPage);
+  });
+  fabricCanvas.on('object:added', () => {
+    if (_isSyncing) return;
+    store._snapshot();
+    syncToStore(store.currentPage);
+  });
+  fabricCanvas.on('object:removed', () => {
+    if (_isSyncing) return;
+    store._snapshot();
+    syncToStore(store.currentPage);
+  });
+
   applyToolMode(store.activeTool);
 }
 
@@ -329,7 +379,7 @@ function syncToStore(page: number) {
 /** Reload the fabric canvas objects from the current store annotations (used by undo/redo) */
 async function reloadCanvasAnnotations(page: number) {
   if (!fabricCanvas || !fabricModule) return;
-  _isSyncing = true;
+  // Remove listeners before clearing so they cannot fire during rebuild
   fabricCanvas.off('object:added');
   fabricCanvas.off('object:modified');
   fabricCanvas.off('object:removed');
@@ -348,20 +398,22 @@ async function reloadCanvasAnnotations(page: number) {
     });
   }
   fabricCanvas.renderAll();
-  // Re-attach event listeners
+  // Re-attach listeners using store.currentPage dynamically
   fabricCanvas.on('object:modified', () => {
+    if (_isSyncing) return;
     store._snapshot();
-    syncToStore(page);
+    syncToStore(store.currentPage);
   });
   fabricCanvas.on('object:added', () => {
+    if (_isSyncing) return;
     store._snapshot();
-    syncToStore(page);
+    syncToStore(store.currentPage);
   });
   fabricCanvas.on('object:removed', () => {
+    if (_isSyncing) return;
     store._snapshot();
-    syncToStore(page);
+    syncToStore(store.currentPage);
   });
-  _isSyncing = false;
 }
 
 // ─── Tool mode application ───────────────────────────────────────────────────
@@ -388,7 +440,13 @@ function applyToolMode(tool: string) {
       fabricCanvas.selection = false;
       fabricCanvas.on('mouse:down', (opt) => {
         if (!fabricModule || !fabricCanvas) return;
-        // Only place text on blank area (not on existing objects)
+        // Click on an existing text object → re-enter edit mode
+        if (opt.target && (opt.target.type === 'i-text' || opt.target.type === 'text')) {
+          fabricCanvas.setActiveObject(opt.target);
+          (opt.target as InstanceType<FabricLib['IText']>).enterEditing();
+          return;
+        }
+        // Don't place new text on top of other (non-text) objects
         if (opt.target) return;
         const pointer = fabricCanvas.getPointer(opt.e);
         const iText = new fabricModule.IText('Text here', {
@@ -405,7 +463,7 @@ function applyToolMode(tool: string) {
         fabricCanvas.setActiveObject(iText);
         fabricCanvas.renderAll();
         iText.enterEditing();
-        store.setActiveTool('select');
+        // Stay on text tool so the font-size picker remains visible
       });
       break;
     }
@@ -489,13 +547,49 @@ function exportAsImage(): string {
   return fabricCanvas?.toDataURL({ format: 'png', multiplier: 2 }) ?? '';
 }
 
+/** Add an uploaded signature image onto the canvas */
+async function addSignatureImage(dataUrl: string): Promise<void> {
+  if (!fabricCanvas || !fabricModule) return;
+  const img = await new Promise<fabric.Image>((resolve) => {
+    fabricModule!.Image.fromURL(dataUrl, (image: fabric.Image) => resolve(image));
+  });
+  // Scale to fit within 40% of the smaller canvas dimension
+  const maxDim = Math.min(fabricCanvas.width ?? 300, fabricCanvas.height ?? 200) * 0.4;
+  const scaleX = maxDim / (img.width ?? maxDim);
+  const scaleY = maxDim / (img.height ?? maxDim);
+  const scale = Math.min(scaleX, scaleY);
+  img.scale(scale);
+  img.set({
+    left: ((fabricCanvas.width ?? 300) - (img.width ?? 0) * scale) / 2,
+    top: ((fabricCanvas.height ?? 200) - (img.height ?? 0) * scale) / 2,
+  });
+  (img as Record<string, unknown>).annotationId = crypto.randomUUID();
+  (img as Record<string, unknown>).annotationType = 'signature';
+  fabricCanvas.add(img);
+  fabricCanvas.setActiveObject(img);
+  fabricCanvas.renderAll();
+}
+
+/** Export the raw pdf.js page canvas as a PNG data-URL (used for OCR) */
+function exportPdfPageAsImage(): string {
+  return pdfCanvasRef.value?.toDataURL('image/png') ?? '';
+}
+
 /** Reload canvas from store annotations (called by parent after undo/redo) */
 async function reloadFromStore(): Promise<void> {
   await reloadCanvasAnnotations(store.currentPage);
 }
 
 // Expose to parent
-defineExpose({ addText, beginSignature, eraseSelected, exportAsImage, reloadFromStore });
+defineExpose({
+  addText,
+  beginSignature,
+  eraseSelected,
+  exportAsImage,
+  reloadFromStore,
+  exportPdfPageAsImage,
+  addSignatureImage,
+});
 
 // ─── Backend event logging ───────────────────────────────────────────────────
 

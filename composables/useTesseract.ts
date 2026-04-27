@@ -59,17 +59,17 @@ export function useTesseract() {
        *   https://yourdomain.com/workers/worker.min.js
        * ─────────────────────────────────────────────────────────────────────
        */
+      const origin = window.location.origin;
       const worker = await Tesseract.createWorker(lang, 1, {
-        workerPath: '/workers/worker.min.js', // served from /public/workers/
-        corePath: '/workers/tesseract-core-simd.wasm.js',
-        langPath: '/lang-data',
+        workerBlobURL: false, // use workerPath directly — required for self-hosted workers
+        workerPath: `${origin}/workers/worker.min.js`,
+        corePath: `${origin}/workers/tesseract-core-simd.wasm.js`,
+        langPath: `${origin}/lang-data`,
         logger: (m: { status: string; progress: number }) => {
           if (m.status === 'recognizing text') {
             progress.value = Math.round(m.progress * 100);
           }
         },
-        // Disable network fetches – every asset must be local
-        cacheMethod: 'none',
       });
 
       const { data } = await worker.recognize(imageDataUrl);
