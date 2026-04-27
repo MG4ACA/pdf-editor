@@ -15,10 +15,10 @@ export function usePdfSave() {
   const store = useEditorStore();
 
   /**
-   * Save the current PDF with annotations burned in.
-   * @param canvasExportFn  Function that returns a PNG data URL from Fabric
+   * Save the current PDF with annotations burned in for ALL pages.
+   * @param annotationsMap  Map of pageNumber → PNG data-URL (from PdfCanvas.exportAllPageAnnotations)
    */
-  async function saveAnnotatedPdf(canvasExportFn: () => string): Promise<void> {
+  async function saveAnnotatedPdf(annotationsMap: Map<number, string>): Promise<void> {
     if (!store.document?.rawBuffer) {
       throw new Error('No PDF loaded.');
     }
@@ -26,7 +26,7 @@ export function usePdfSave() {
     store.setLoading(true, 'Saving PDF…');
 
     try {
-      const { PDFDocument, rgb } = await import('pdf-lib');
+      const { PDFDocument } = await import('pdf-lib');
 
       // Load the original PDF bytes
       const pdfDoc = await PDFDocument.load(store.document.rawBuffer);
@@ -36,30 +36,26 @@ export function usePdfSave() {
       pdfDoc.setProducer('Free PDF Editor – https://yoursite.com');
       pdfDoc.setModificationDate(new Date());
 
-      // Get the annotation canvas PNG and embed it on page 1
-      const pageIndex = store.currentPage - 1;
       const pages = pdfDoc.getPages();
-      const targetPage = pages[pageIndex];
 
-      if (targetPage) {
-        const annotationDataUrl = canvasExportFn();
-        if (annotationDataUrl && annotationDataUrl !== 'data:,') {
-          // Strip data URL prefix to get raw base64
-          const base64 = annotationDataUrl.split(',')[1];
-          const pngBytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+      // Embed annotations for every page that has them
+      for (const [pageNum, annotationDataUrl] of annotationsMap) {
+        if (!annotationDataUrl || annotationDataUrl === 'data:,') continue;
+        const targetPage = pages[pageNum - 1];
+        if (!targetPage) continue;
 
-          const pngImage = await pdfDoc.embedPng(pngBytes);
-          const { width, height } = targetPage.getSize();
+        const base64 = annotationDataUrl.split(',')[1];
+        const pngBytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+        const pngImage = await pdfDoc.embedPng(pngBytes);
+        const { width, height } = targetPage.getSize();
 
-          // Draw annotation image over the full page (transparent where no annotations)
-          targetPage.drawImage(pngImage, {
-            x: 0,
-            y: 0,
-            width,
-            height,
-            opacity: 1,
-          });
-        }
+        targetPage.drawImage(pngImage, {
+          x: 0,
+          y: 0,
+          width,
+          height,
+          opacity: 1,
+        });
       }
 
       const pdfBytes = await pdfDoc.save();

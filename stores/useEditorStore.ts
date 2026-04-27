@@ -55,6 +55,9 @@ export const useEditorStore = defineStore('editor', {
     // Canvas render scale (2x for high-DPI)
     renderScale: 2.0,
 
+    // UI zoom level (CSS transform – does not affect render resolution)
+    zoomLevel: 1.0,
+
     // Undo / redo history stacks
     _past: [] as HistoryEntry[],
     _future: [] as HistoryEntry[],
@@ -122,6 +125,30 @@ export const useEditorStore = defineStore('editor', {
 
     setActiveFontSize(size: number) {
       this.activeFontSize = size;
+    },
+
+    // -----------------------------------------------------------------------
+    // Zoom
+    // -----------------------------------------------------------------------
+
+    setZoomLevel(level: number) {
+      this.zoomLevel = Math.max(0.25, Math.min(4.0, Math.round(level * 100) / 100));
+    },
+
+    zoomIn() {
+      const steps = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 4.0];
+      const next = steps.find((s) => s > this.zoomLevel + 0.001);
+      this.zoomLevel = next ?? 4.0;
+    },
+
+    zoomOut() {
+      const steps = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 4.0];
+      const prev = [...steps].reverse().find((s) => s < this.zoomLevel - 0.001);
+      this.zoomLevel = prev ?? 0.25;
+    },
+
+    resetZoom() {
+      this.zoomLevel = 1.0;
     },
 
     // -----------------------------------------------------------------------

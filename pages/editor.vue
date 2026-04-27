@@ -140,6 +140,41 @@
             />
           </ClientOnly>
         </div>
+
+        <!-- Bottom zoom bar -->
+        <div
+          v-if="store.hasDocument"
+          class="flex h-9 items-center justify-end gap-2 border-t border-gray-200 bg-white px-4 text-xs text-gray-600"
+        >
+          <button
+            class="flex h-6 w-6 items-center justify-center rounded hover:bg-gray-100 disabled:opacity-40"
+            :disabled="store.zoomLevel <= 0.25"
+            title="Zoom out (Ctrl+-)"
+            @click="store.zoomOut()"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+          <button
+            class="w-14 rounded border border-gray-200 px-1.5 py-0.5 text-center hover:bg-gray-50"
+            title="Reset zoom"
+            @click="store.resetZoom()"
+          >
+            {{ Math.round(store.zoomLevel * 100) }}%
+          </button>
+          <button
+            class="flex h-6 w-6 items-center justify-center rounded hover:bg-gray-100 disabled:opacity-40"
+            :disabled="store.zoomLevel >= 4"
+            title="Zoom in (Ctrl++)"
+            @click="store.zoomIn()"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+        </div>
       </main>
 
       <!-- Right: OCR result panel -->
@@ -258,7 +293,9 @@ function copyOcr() {
 
 async function savePdf() {
   try {
-    await saveAnnotatedPdf(() => pdfCanvasRef.value?.exportAsImage() ?? '');
+    const annotationsMap = await pdfCanvasRef.value?.exportAllPageAnnotations();
+    if (!annotationsMap) return;
+    await saveAnnotatedPdf(annotationsMap);
   } catch (err: unknown) {
     errorMessage.value = err instanceof Error ? err.message : 'Failed to save PDF.';
   }
@@ -291,8 +328,24 @@ function onKeyDown(e: KeyboardEvent) {
   }
 }
 
-onMounted(() => window.addEventListener('keydown', onKeyDown));
-onUnmounted(() => window.removeEventListener('keydown', onKeyDown));
+function onWheel(e: WheelEvent) {
+  if (!e.ctrlKey && !e.metaKey) return;
+  e.preventDefault();
+  if (e.deltaY < 0) {
+    store.zoomIn();
+  } else {
+    store.zoomOut();
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('wheel', onWheel, { passive: false });
+});
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKeyDown);
+  window.removeEventListener('wheel', onWheel);
+});
 </script>
 
 <style scoped>

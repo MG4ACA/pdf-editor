@@ -13,16 +13,19 @@
       </div>
     </Transition>
 
-    <!-- Canvas wrapper – pdf render + fabric overlay are stacked here -->
-    <div ref="canvasWrapperRef" class="panel relative shadow-xl" :style="wrapperStyle">
-      <!-- Layer 1: pdf.js render target -->
-      <canvas ref="pdfCanvasRef" class="block" />
+    <!-- Zoom spacer: sets layout size = canvas × zoomLevel so overflow-auto scrolls correctly -->
+    <div :style="zoomSpacerStyle">
+      <!-- Actual canvas wrapper: CSS-scaled for visual zoom -->
+      <div ref="canvasWrapperRef" class="panel absolute top-0 left-0 shadow-xl" :style="scaledWrapperStyle">
+        <!-- Layer 1: pdf.js render target -->
+        <canvas ref="pdfCanvasRef" class="block" />
 
-      <!-- Layer 2: Fabric.js annotation overlay.
-           The outer div keeps absolute positioning even after Fabric
-           inserts its own wrapper div around the inner canvas. -->
-      <div ref="fabricOverlayRef" class="absolute inset-0 overflow-hidden">
-        <canvas ref="fabricCanvasRef" />
+        <!-- Layer 2: Fabric.js annotation overlay.
+             The outer div keeps absolute positioning even after Fabric
+             inserts its own wrapper div around the inner canvas. -->
+        <div ref="fabricOverlayRef" class="absolute inset-0 overflow-hidden">
+          <canvas ref="fabricCanvasRef" />
+        </div>
       </div>
     </div>
 
@@ -110,9 +113,18 @@ const initMessage = ref('Loading PDF engine…');
 
 // ─── Computed ─────────────────────────────────────────────────────────────────
 
-const wrapperStyle = computed(() => ({
+const zoomSpacerStyle = computed(() => ({
+  width: canvasWidth.value ? `${Math.round(canvasWidth.value * store.zoomLevel)}px` : 'auto',
+  height: canvasHeight.value ? `${Math.round(canvasHeight.value * store.zoomLevel)}px` : 'auto',
+  position: 'relative' as const,
+  flexShrink: '0',
+}));
+
+const scaledWrapperStyle = computed(() => ({
   width: canvasWidth.value ? `${canvasWidth.value}px` : 'auto',
   height: canvasHeight.value ? `${canvasHeight.value}px` : 'auto',
+  transform: `scale(${store.zoomLevel})`,
+  transformOrigin: 'top left',
 }));
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
@@ -467,6 +479,16 @@ function applyToolMode(tool: string) {
       });
       break;
     }
+    case 'select': {
+      fabricCanvas.defaultCursor = 'default';
+      fabricCanvas.selection = true;
+      fabricCanvas.forEachObject((obj) => {
+        obj.selectable = true;
+        obj.evented = true;
+      });
+      fabricCanvas.renderAll();
+      break;
+    }
     case 'draw':
     case 'signature': {
       fabricCanvas.defaultCursor = 'crosshair';
@@ -580,6 +602,61 @@ async function reloadFromStore(): Promise<void> {
   await reloadCanvasAnnotations(store.currentPage);
 }
 
+/**
+ * Export annotations for ALL pages as a Map<pageNumber, pngDataURL>.
+ * Creates a temporary offscreen Fabric canvas for each page that has annotations
+ * so the correct dimensions and object positions are preserved.
+ * Used by usePdfSave to embed annotations into every page of the PDF.
+ */
+async function exportAllPageAnnotations(): Promise<Map<number, string>> {
+  if (!fabricModule || !pdfDoc) return new Map();
+
+  // Flush current page state to store before iterating
+  syncToStore(store.currentPage);
+
+  const result = new Map<number, string>();
+  const SCALE = store.renderScale;
+  const totalPages = store.document?.totalPages ?? 0;
+
+  for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+    const pageAnnotations = store.annotations.filter((a) => a.page === pageNum);
+    if (pageAnnotations.length === 0) continue;
+
+    // Fetch the correct dimensions for this page from pdf.js
+    const pdfPage = await pdfDoc.getPage(pageNum);
+    const viewport = pdfPage.getViewport({ scale: SCALE });
+    const cssWidth = viewport.width / SCALE;
+    const cssHeight = viewport.height / SCALE;
+
+    // Offscreen canvas — never attached to the DOM
+    const offscreenEl = document.createElement('canvas');
+    const tempFabric = new fabricModule.Canvas(offscreenEl, {
+      width: cssWidth,
+      height: cssHeight,
+      selection: false,
+    });
+
+    for (const annotation of pageAnnotations) {
+      await new Promise<void>((resolve) => {
+        fabricModule!.util.enlivenObjects(
+          [annotation.fabricJson],
+          (objects: fabric.Object[]) => {
+            objects.forEach((obj) => tempFabric.add(obj));
+            resolve();
+          },
+          'fabric',
+        );
+      });
+    }
+
+    tempFabric.renderAll();
+    result.set(pageNum, tempFabric.toDataURL({ format: 'png', multiplier: 2 }));
+    tempFabric.dispose();
+  }
+
+  return result;
+}
+
 // Expose to parent
 defineExpose({
   addText,
@@ -589,6 +666,7 @@ defineExpose({
   reloadFromStore,
   exportPdfPageAsImage,
   addSignatureImage,
+  exportAllPageAnnotations,
 });
 
 // ─── Backend event logging ───────────────────────────────────────────────────

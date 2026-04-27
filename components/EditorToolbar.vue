@@ -16,6 +16,16 @@
 
     <div class="my-1 w-10 border-t border-gray-100" />
 
+    <!-- Select / Move tool -->
+    <ToolButton
+      icon="select"
+      label="Select"
+      tool="select"
+      :active="store.activeTool === 'select'"
+      :disabled="!store.hasDocument"
+      @click="handleTool('select')"
+    />
+
     <!-- Text tool -->
     <ToolButton
       icon="text"

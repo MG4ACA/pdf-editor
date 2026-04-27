@@ -80,6 +80,20 @@
       <line x1="9" y1="3" x2="9" y2="21" />
       <line x1="15" y1="3" x2="15" y2="21" />
     </svg>
+    <!-- Cursor / select icon -->
+    <svg
+      v-else-if="icon === 'select'"
+      xmlns="http://www.w3.org/2000/svg"
+      class="h-5 w-5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M5 3l14 9-7 1-4 7-3-17z" />
+    </svg>
     <span>{{ label }}</span>
   </button>
 </template>
