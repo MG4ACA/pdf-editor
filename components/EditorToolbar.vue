@@ -1,7 +1,7 @@
 <template>
   <!-- Vertical toolbar pinned to the left of the editor -->
   <aside
-    class="flex h-full w-16 flex-col items-center gap-1 border-r border-gray-200 bg-white py-3 shadow-sm"
+    class="flex h-full w-16 flex-col items-center gap-1 overflow-y-auto overflow-x-hidden border-r border-gray-200 bg-white py-3 shadow-sm"
   >
     <!-- File open -->
     <label
@@ -121,7 +121,7 @@
       <span class="text-xs text-gray-500">Color</span>
     </div>
 
-    <div class="flex-1" />
+    <div class="my-1 w-10 border-t border-gray-100" />
 
     <!-- Undo -->
     <button class="tool-btn" :disabled="!store.canUndo" title="Undo (Ctrl+Z)" @click="emit('undo')">
