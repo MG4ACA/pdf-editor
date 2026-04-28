@@ -1,6 +1,8 @@
 const SITE_URL = 'https://pdfeditor.lumicore-labs.com';
 const SITE_NAME = 'LumiCore PDF Editor';
-const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`;
+// SVG served directly; for Twitter/X card compatibility a PNG conversion is
+// recommended — place it at /public/og-image.png and switch this path.
+const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.svg`;
 
 export interface AppSeoOptions {
   /** Page <title> and og:title */

@@ -38,6 +38,7 @@ pdf-editor/
 │   ├── IconRedo.vue
 │   └── IconSave.vue
 ├── composables/
+│   ├── useAppSeo.ts             # Centralised SEO (useSeoMeta, canonical, Twitter card)
 │   ├── usePdfSave.ts            # pdf-lib export + browser download
 │   └── useTesseract.ts          # Self-hosted OCR (Tesseract.js v5)
 ├── layouts/
@@ -45,8 +46,13 @@ pdf-editor/
 │   └── editor.vue               # Full-height, no footer
 ├── pages/
 │   ├── index.vue                # SEO landing page
-│   └── editor.vue               # Main editor UI
+│   ├── about.vue                # About / privacy page
+│   ├── editor.vue               # Main editor UI
+│   └── tools/
+│       ├── index.vue            # Tools hub — grid of all tool cards
+│       └── [slug].vue           # Dynamic SEO landing page per tool
 ├── public/
+│   ├── og-image.svg             # OG / Twitter share image
 │   ├── workers/
 │   │   ├── pdf.worker.min.js    # pdf.js web worker
 │   │   ├── worker.min.js        # Tesseract.js web worker
@@ -63,9 +69,14 @@ pdf-editor/
 │   └── routes/events.js         # POST /api/events
 ├── stores/
 │   └── useEditorStore.ts        # Pinia store (document, annotations, history)
+├── utils/
+│   └── toolsConfig.ts           # Per-tool SEO data (title, prose, HowTo steps)
 ├── app.vue
 ├── nuxt.config.ts
 ├── tailwind.config.js
+├── ecosystem.config.cjs         # PM2 config — Nuxt SSR + Express API processes
+├── deploy.sh                    # Automated VPS deployment script
+├── HOSTINGER_VPS_DEPLOYMENT.md  # Full VPS deployment guide
 ├── .env.example
 └── PROJECT_PLAN.md
 ```
@@ -129,7 +140,13 @@ pdf-editor/
 ### SEO & UX
 
 - [x] Landing page with hero, features grid, and prose copy
-- [x] `useSeoMeta` configured (title, description, OG tags)
+- [x] `useAppSeo` centralised composable — `useSeoMeta`, Open Graph, Twitter card, canonical URL
+- [x] OG share image (`/public/og-image.svg`)
+- [x] XML sitemap via `@nuxtjs/sitemap` (auto-discovers static routes, explicit tool routes)
+- [x] Tools hub page at `/tools` — grid of all available tool cards
+- [x] Dynamic SEO landing pages at `/tools/:slug` with per-tool meta, prose, and HowTo steps
+- [x] About / privacy page at `/about`
+- [x] 404 handling for unknown tool slugs (`createError` with `statusCode: 404`)
 - [x] Responsive layout (Tailwind)
 - [x] Loading states + error toasts
 - [x] Sidebar toggle for small screens
@@ -161,10 +178,12 @@ pdf-editor/
 
 ### Production Build
 
-- [ ] `npm run build` — build Nuxt app
-- [ ] `npm run preview` — preview production build
-- [ ] Set `NODE_ENV=production` and configure `ALLOWED_ORIGINS` in `.env`
-- [ ] Use a process manager (PM2) for both Express and Nuxt
+- [x] `npm run build` — build Nuxt app
+- [x] `npm run preview` — preview production build
+- [x] Set `NODE_ENV=production` and configure `ALLOWED_ORIGINS` in `.env`
+- [x] `ecosystem.config.cjs` — PM2 config for two processes: `pdf-editor-nuxt` (port 3010) and `pdf-editor-api` (port 3011)
+- [x] `deploy.sh` — automated VPS deployment script (pull, install, build, restart PM2)
+- [x] `HOSTINGER_VPS_DEPLOYMENT.md` — complete Hostinger VPS setup and deployment guide
 - [ ] Configure reverse proxy (Nginx/Caddy) to unify ports
 
 ---
