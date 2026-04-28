@@ -63,9 +63,12 @@
         <h3>Trusted Tools</h3>
         <p>
           Explore our specialised tools:
-          <NuxtLink to="/tools/edit-pdf">Edit PDF Online</NuxtLink>,
-          <NuxtLink to="/tools/sign-pdf-online">Sign PDF Online</NuxtLink>,
-          <NuxtLink to="/tools/free-pdf-editor">Free PDF Editor</NuxtLink>, and
+          <NuxtLink to="/tools/edit-pdf">Edit PDF Online</NuxtLink>
+          ,
+          <NuxtLink to="/tools/sign-pdf-online">Sign PDF Online</NuxtLink>
+          ,
+          <NuxtLink to="/tools/free-pdf-editor">Free PDF Editor</NuxtLink>
+          , and
           <NuxtLink to="/tools/ocr-pdf">OCR PDF</NuxtLink>
           — all free, all private, all in-browser.
         </p>
@@ -85,7 +88,7 @@ useAppSeo({
   description:
     'Edit PDFs for free in your browser. Add text, draw signatures, annotate pages, and extract text with OCR — 100% client-side, private, and secure. No registration required.',
   path: '/',
-})
+});
 
 // ── Structured Data: SoftwareApplication ────────────────────────────────────
 const softwareAppSchema = {
@@ -110,7 +113,7 @@ const softwareAppSchema = {
     'Multi-page PDF navigation',
     'No upload, no registration, no watermarks',
   ],
-}
+};
 
 useHead({
   script: [

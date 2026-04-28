@@ -1,17 +1,17 @@
 export interface ToolHowToStep {
-  name: string
-  text: string
+  name: string;
+  text: string;
 }
 
 export interface ToolConfig {
-  slug: string
-  title: string
-  h1: string
-  subheading: string
-  description: string
-  keywords: string
-  prose: string
-  howToSteps: ToolHowToStep[]
+  slug: string;
+  title: string;
+  h1: string;
+  subheading: string;
+  description: string;
+  keywords: string;
+  prose: string;
+  howToSteps: ToolHowToStep[];
 }
 
 export const toolsConfig: Record<string, ToolConfig> = {
@@ -141,7 +141,7 @@ export const toolsConfig: Record<string, ToolConfig> = {
       },
     ],
   },
-}
+};
 
 /** Ordered list of slugs for sitemap generation */
-export const toolSlugs = Object.keys(toolsConfig)
+export const toolSlugs = Object.keys(toolsConfig);

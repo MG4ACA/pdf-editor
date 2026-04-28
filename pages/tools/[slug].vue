@@ -67,13 +67,13 @@
 </template>
 
 <script setup lang="ts">
-const route = useRoute()
-const slug = route.params.slug as string
+const route = useRoute();
+const slug = route.params.slug as string;
 
 // Resolve tool config — throw 404 for unknown slugs
-const tool = toolsConfig[slug]
+const tool = toolsConfig[slug];
 if (!tool) {
-  throw createError({ statusCode: 404, statusMessage: 'Tool not found' })
+  throw createError({ statusCode: 404, statusMessage: 'Tool not found' });
 }
 
 // Apply per-tool SEO meta, OG, Twitter, and canonical
@@ -81,13 +81,13 @@ useAppSeo({
   title: tool.title,
   description: tool.description,
   path: `/tools/${tool.slug}`,
-})
+});
 
 // Convert newline-separated paragraphs to HTML <p> tags
 const proseHtml = tool.prose
   .split('\n\n')
   .map((p) => `<p>${p.trim()}</p>`)
-  .join('\n')
+  .join('\n');
 
 // ── Structured Data: HowTo ───────────────────────────────────────────────────
 const howToSchema = {
@@ -101,7 +101,7 @@ const howToSchema = {
     name: step.name,
     text: step.text,
   })),
-}
+};
 
 useHead({
   script: [
@@ -110,5 +110,5 @@ useHead({
       innerHTML: JSON.stringify(howToSchema),
     },
   ],
-})
+});
 </script>

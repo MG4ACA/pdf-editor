@@ -1,3 +1,12 @@
+<script setup lang="ts">
+useAppSeo({
+  title: 'About LumiCore Free PDF Editor – How It Works & Privacy Policy',
+  description:
+    'Learn how LumiCore Free PDF Editor works. All PDF editing is client-side using pdf.js, pdf-lib, and Tesseract.js — your files never leave your browser.',
+  path: '/about',
+});
+</script>
+
 <template>
   <div class="mx-auto max-w-2xl px-6 py-16">
     <h1 class="mb-6 text-3xl font-extrabold text-gray-900">About Free PDF Editor</h1>
