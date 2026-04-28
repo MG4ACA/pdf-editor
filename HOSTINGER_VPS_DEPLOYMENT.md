@@ -62,7 +62,7 @@ EXIT;
 sudo mkdir -p /var/www/pdf-editor
 sudo chown -R $USER:$USER /var/www/pdf-editor
 cd /var/www/pdf-editor
-git clone https://github.com/YOUR_GITHUB_USERNAME/pdf-editor.git .
+git clone https://github.com/MG4ACA/pdf-editor.git .
 ```
 
 ---

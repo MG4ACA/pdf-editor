@@ -5,7 +5,7 @@ export default defineNuxtConfig({
 
   ssr: true,
 
-  modules: ['@nuxtjs/tailwindcss', '@pinia/nuxt'],
+  modules: ['@nuxtjs/tailwindcss', '@pinia/nuxt', '@nuxtjs/sitemap'],
 
   css: ['~/assets/css/main.css'],
 
@@ -28,7 +28,7 @@ export default defineNuxtConfig({
         },
         { property: 'og:type', content: 'website' },
       ],
-      link: [{ rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }],
+      link: [{ rel: 'icon', type: 'image/png', href: '/1.png' }],
     },
   },
 
@@ -72,5 +72,21 @@ export default defineNuxtConfig({
         changeOrigin: true,
       },
     },
+  },
+
+  // ── Sitemap ────────────────────────────────────────────────────────────────
+  // @nuxtjs/sitemap auto-discovers static pages; dynamic /tools/:slug routes
+  // are declared explicitly so they are included in sitemap.xml.
+  sitemap: {
+    siteUrl: 'https://pdfeditor.lumicore-labs.com',
+    // Exclude API and devtools paths from the sitemap
+    exclude: ['/api/**', '/__nuxt_devtools__/**'],
+    // Explicitly list the dynamic tool routes
+    urls: [
+      { loc: '/tools/edit-pdf', priority: 0.9, changefreq: 'weekly' as const },
+      { loc: '/tools/sign-pdf-online', priority: 0.9, changefreq: 'weekly' as const },
+      { loc: '/tools/free-pdf-editor', priority: 0.9, changefreq: 'weekly' as const },
+      { loc: '/tools/ocr-pdf', priority: 0.9, changefreq: 'weekly' as const },
+    ],
   },
 });

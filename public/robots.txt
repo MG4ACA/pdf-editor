@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Keep API and internal Nuxt routes private
+Disallow: /api/
+Disallow: /_nuxt/
+Disallow: /__nuxt_devtools__/
+
+Sitemap: https://pdfeditor.lumicore-labs.com/sitemap.xml

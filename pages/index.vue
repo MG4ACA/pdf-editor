@@ -38,21 +38,40 @@
           Unlike other online PDF editors that upload your documents to remote servers, our tool
           processes everything inside your browser using WebAssembly and the
           <strong>pdf.js</strong>
-          rendering engine. Your confidential contracts, invoices, and personal documents are never
-          transmitted.
+          rendering engine. Your confidential contracts, invoices, and personal documents are
+          <strong>never transmitted</strong>
+          — they stay on your device throughout the entire editing session.
+        </p>
+        <p>
+          There is no account to create, no email to verify, and no software to install. Open the
+          editor, drop in your PDF, and start editing in seconds. When you're done, hit Save and the
+          finished file downloads straight to your device — with no watermarks added, ever.
         </p>
         <h3>Key Features</h3>
         <ul>
           <li>Add text annotations with custom font size and colour</li>
-          <li>Draw freehand signatures directly on the PDF</li>
-          <li>Freehand drawing / highlight layer</li>
-          <li>Undo / redo history (up to 50 steps)</li>
-          <li>OCR — extract text from scanned PDFs (powered by Tesseract.js)</li>
-          <li>Download the edited PDF instantly</li>
+          <li>Draw freehand signatures directly on the PDF with mouse or touchscreen</li>
+          <li>Freehand drawing and highlight layer for visual markup</li>
+          <li>Undo / redo history (up to 50 steps) so you can experiment freely</li>
+          <li>
+            OCR — extract text from scanned PDFs powered by self-hosted Tesseract.js (no external
+            API calls)
+          </li>
+          <li>Multi-page PDF support with instant page navigation</li>
+          <li>Download the edited PDF instantly — no watermarks, no limits</li>
         </ul>
+        <h3>Trusted Tools</h3>
+        <p>
+          Explore our specialised tools:
+          <NuxtLink to="/tools/edit-pdf">Edit PDF Online</NuxtLink>,
+          <NuxtLink to="/tools/sign-pdf-online">Sign PDF Online</NuxtLink>,
+          <NuxtLink to="/tools/free-pdf-editor">Free PDF Editor</NuxtLink>, and
+          <NuxtLink to="/tools/ocr-pdf">OCR PDF</NuxtLink>
+          — all free, all private, all in-browser.
+        </p>
         <p>
           Works in all modern browsers including Chrome, Firefox, Safari, and Edge. No plugins or
-          extensions required.
+          extensions required. Privacy by design, not as a feature add-on.
         </p>
       </div>
     </section>
@@ -60,11 +79,46 @@
 </template>
 
 <script setup lang="ts">
-// SEO meta handled by nuxt.config.ts defaults + page-level override below
-useSeoMeta({
+// Centralised SEO: OG, Twitter, canonical
+useAppSeo({
   title: 'Free PDF Editor – Edit, Annotate & Sign PDFs Online | No Upload',
   description:
-    'Edit PDFs for free in your browser. Add text, draw signatures, annotate pages, and extract text with OCR — 100% client-side, private, and secure.',
+    'Edit PDFs for free in your browser. Add text, draw signatures, annotate pages, and extract text with OCR — 100% client-side, private, and secure. No registration required.',
+  path: '/',
+})
+
+// ── Structured Data: SoftwareApplication ────────────────────────────────────
+const softwareAppSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'LumiCore Free PDF Editor',
+  applicationCategory: 'UtilitiesApplication',
+  operatingSystem: 'Web Browser',
+  url: 'https://pdfeditor.lumicore-labs.com/editor',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+  },
+  description:
+    'A free, browser-based PDF editor. Add text, draw signatures, annotate pages, and run OCR on scanned PDFs — all client-side with no file uploads.',
+  featureList: [
+    'Text annotation with custom font size and colour',
+    'Freehand drawing and signature tool',
+    'Undo/redo history (50 steps)',
+    'OCR text extraction via Tesseract.js',
+    'Multi-page PDF navigation',
+    'No upload, no registration, no watermarks',
+  ],
+}
+
+useHead({
+  script: [
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify(softwareAppSchema),
+    },
+  ],
 });
 
 const features = [
