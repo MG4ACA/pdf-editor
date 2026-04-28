@@ -20,7 +20,7 @@ cd "$APP_DIR"
 # ── Pull latest code ──────────────────────────────────────────────
 echo "📥 Pulling latest code..."
 git fetch --all
-git pull origin main
+git pull origin phase-01-implementations
 
 # ── Install dependencies ──────────────────────────────────────────
 echo "📦 Installing dependencies..."
