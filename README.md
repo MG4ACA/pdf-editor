@@ -4,7 +4,44 @@ A professional, SEO-optimised, client-side-first PDF editor built with **Nuxt 3*
 
 ---
 
-## Quick Start
+## Features
+
+### Editing tools
+
+| Tool          | Description                                                                      |
+| ------------- | -------------------------------------------------------------------------------- |
+| **Select**    | Click to select, drag to move, handles to resize/rotate any annotation           |
+| **Text**      | Click anywhere on the canvas to place editable text; choose font size and colour |
+| **Draw**      | Freehand pencil brush with adjustable size (1–40 px) and colour                  |
+| **Signature** | Dedicated signature brush (thin, dark ink) or upload a signature image           |
+| **Erase**     | Click any annotation to delete it                                                |
+
+### Canvas & view
+
+- Zoom in / out with the top-bar controls or **Ctrl+Scroll** (25 % → 400 %)
+- Colour picker applies instantly to new annotations and updates the selected object live
+- Brush-size slider visible in the top bar whenever draw / signature tool is active
+- Font-size input visible in the top bar whenever text tool is active
+
+### Document
+
+- Drag-and-drop or file-picker upload (PDF, max 25 MB)
+- pdf.js rendering at **2× resolution** for crisp HiDPI display
+- Multi-page navigation; all pages are preserved on save
+- **Save / export** — annotations from every page are flattened onto the PDF via pdf-lib and downloaded
+
+### History
+
+- **50-step undo / redo** (`Ctrl+Z` / `Ctrl+Y`)
+- **Ctrl+S** to save at any time
+
+### OCR
+
+- Tesseract.js v5 runs entirely in the browser — no data leaves the device
+- Workers and English language model served from `/public` (zero CDN dependency)
+- Results shown in a collapsible sidebar panel with a one-click Copy button
+
+---
 
 ### 1. Clone & install
 

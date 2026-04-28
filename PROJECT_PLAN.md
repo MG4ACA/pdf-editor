@@ -1,23 +1,24 @@
 # Free PDF Editor — Project Plan
 
 ## Overview
+
 A browser-based PDF editor built with **Nuxt 3 (SSR)**, **Tailwind CSS**, **Pinia**, **Fabric.js**, and a lightweight **Express.js** API backend. All editing is client-side; the backend only logs anonymised events to MySQL.
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Frontend framework | Nuxt 3 (SSR) |
-| Styling | Tailwind CSS + @tailwindcss/typography |
-| State management | Pinia |
-| PDF rendering | pdf.js (2× scale) |
-| PDF saving | pdf-lib |
-| Annotation canvas | Fabric.js v5 |
-| OCR | Tesseract.js v5 (self-hosted assets) |
-| API server | Express.js (port 3002) |
-| Database | MySQL 8 (event logging only) |
+| Layer              | Technology                             |
+| ------------------ | -------------------------------------- |
+| Frontend framework | Nuxt 3 (SSR)                           |
+| Styling            | Tailwind CSS + @tailwindcss/typography |
+| State management   | Pinia                                  |
+| PDF rendering      | pdf.js (2× scale)                      |
+| PDF saving         | pdf-lib                                |
+| Annotation canvas  | Fabric.js v5                           |
+| OCR                | Tesseract.js v5 (self-hosted assets)   |
+| API server         | Express.js (port 3002)                 |
+| Database           | MySQL 8 (event logging only)           |
 
 ---
 
@@ -74,26 +75,32 @@ pdf-editor/
 ## Features
 
 ### Core Editing (Client-side)
+
 - [x] PDF upload (drag-and-drop + file picker, 25 MB limit)
 - [x] PDF rendering via pdf.js at 2× resolution
 - [x] Multi-page navigation (previous / next)
 - [x] Text annotation tool (Fabric.js IText)
 - [x] Freehand drawing tool (Fabric.js pencil brush)
-- [x] Signature tool (freehand on canvas)
+- [x] Signature tool — popup with freehand draw mode or image upload
+- [x] Select / drag tool (Fabric.js selection mode — move, resize, rotate objects)
 - [x] Erase selected annotation
-- [x] Colour picker for annotations
-- [x] Font size selector
+- [x] Colour picker — applies to new annotations and updates the selected object live
+- [x] Font size selector (text tool, shown in top bar)
+- [x] Variable brush size for draw / signature tools (slider 1–40 px, shown in top bar)
+- [x] Zoom in / out (CSS transform; top-bar −/100%/+ controls; Ctrl+Scroll)
 - [x] Undo / Redo (50-step snapshot history)
-- [x] Save / export — flatten annotations onto PDF via pdf-lib and download
+- [x] Save / export — all pages' annotations embedded via pdf-lib and downloaded
 - [x] Keyboard shortcuts: `Ctrl+Z` undo, `Ctrl+Y` redo, `Ctrl+S` save
 
 ### OCR
+
 - [x] Tesseract.js v5 self-hosted (no external API calls)
 - [x] OCR assets served from `/public` (worker, core WASM, eng model)
 - [x] Progress indicator during recognition
 - [x] Result displayed in editor sidebar
 
 ### Backend API (Express.js)
+
 - [x] `POST /api/events` — log edit actions (anonymised IP)
 - [x] `GET /api/health` — health check endpoint
 - [x] Helmet security headers
@@ -103,12 +110,14 @@ pdf-editor/
 - [x] Morgan HTTP request logging
 
 ### Database (MySQL)
+
 - [x] `edit_events` table auto-created on server startup
 - [x] Columns: `id`, `action`, `masked_ip`, `created_at`
 - [x] Indexes on `action` and `created_at`
 - [x] Dedicated `pdf_editor_user` with least-privilege grants
 
 ### Security
+
 - [x] No file uploads to server — fully client-side processing
 - [x] IP masking (last octet/group replaced with `xxx`)
 - [x] Action validation against allowlist (`ALLOWED_ACTIONS`)
@@ -118,6 +127,7 @@ pdf-editor/
 - [x] `.env` secrets never committed (`.gitignore`)
 
 ### SEO & UX
+
 - [x] Landing page with hero, features grid, and prose copy
 - [x] `useSeoMeta` configured (title, description, OG tags)
 - [x] Responsive layout (Tailwind)
@@ -129,11 +139,13 @@ pdf-editor/
 ## Setup Checklist
 
 ### Prerequisites
+
 - [ ] Node.js 18+
 - [ ] MySQL 8+
 - [ ] npm 9+
 
 ### One-time Setup
+
 - [x] `npm install` — install all dependencies
 - [x] Copy `.env.example` → `.env` and fill in DB credentials
 - [x] Run MySQL setup: `Get-Content scripts/mysql-setup.sql | mysql -u root -p`
@@ -142,11 +154,13 @@ pdf-editor/
 - [x] Copy pdf.js worker: `Copy-Item node_modules/pdfjs-dist/build/pdf.worker.min.js public/workers/pdf.worker.min.js`
 
 ### Running the App
+
 - [ ] Start Express API: `node server/index.js` (port 3002)
 - [ ] Start Nuxt dev: `npm run dev` (port 3000)
 - [ ] Open browser: `http://localhost:3000`
 
 ### Production Build
+
 - [ ] `npm run build` — build Nuxt app
 - [ ] `npm run preview` — preview production build
 - [ ] Set `NODE_ENV=production` and configure `ALLOWED_ORIGINS` in `.env`
@@ -157,15 +171,15 @@ pdf-editor/
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|---|---|---|
-| `DB_HOST` | MySQL host | `localhost` |
-| `DB_PORT` | MySQL port | `3306` |
-| `DB_NAME` | Database name | `pdf_editor` |
-| `DB_USER` | DB username | `pdf_editor_user` |
-| `DB_PASSWORD` | DB password | — |
+| Variable          | Description                  | Default                 |
+| ----------------- | ---------------------------- | ----------------------- |
+| `DB_HOST`         | MySQL host                   | `localhost`             |
+| `DB_PORT`         | MySQL port                   | `3306`                  |
+| `DB_NAME`         | Database name                | `pdf_editor`            |
+| `DB_USER`         | DB username                  | `pdf_editor_user`       |
+| `DB_PASSWORD`     | DB password                  | —                       |
 | `ALLOWED_ORIGINS` | Comma-separated CORS origins | `http://localhost:3000` |
-| `PORT` | Express port | `3002` |
+| `PORT`            | Express port                 | `3002`                  |
 
 ---
 
