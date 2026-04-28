@@ -10,6 +10,7 @@
         @undo="undoAction"
         @redo="redoAction"
         @signature-image="onSignatureImage"
+        @delete-page="deleteCurrentPage"
       />
 
       <!-- Centre: Canvas area -->
@@ -317,6 +318,20 @@ async function savePdf() {
   } catch (err: unknown) {
     errorMessage.value = err instanceof Error ? err.message : 'Failed to save PDF.';
   }
+}
+
+// ─── Delete page ──────────────────────────────────────────────────────────────
+
+function deleteCurrentPage() {
+  if (!store.hasDocument) return;
+  const pageNum = store.currentPage;
+  const confirmed = window.confirm(
+    `Delete page ${store.visiblePages.indexOf(pageNum) + 1} of ${store.visiblePageCount}?\n\nThis can be undone with Ctrl+Z.`,
+  );
+  if (!confirmed) return;
+  store.deletePage(pageNum);
+  // Re-render the newly navigated page (currentPage changed inside the store)
+  pdfCanvasRef.value?.reloadFromStore();
 }
 
 // ─── Keyboard shortcuts ───────────────────────────────────────────────────────

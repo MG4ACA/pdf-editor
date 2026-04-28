@@ -58,6 +58,12 @@ export function usePdfSave() {
         });
       }
 
+      // Remove deleted pages (highest index first to preserve lower indices)
+      const deletedPages = [...store.deletedPages].sort((a, b) => b - a);
+      for (const pageNum of deletedPages) {
+        pdfDoc.removePage(pageNum - 1); // pdf-lib uses 0-based page index
+      }
+
       const pdfBytes = await pdfDoc.save();
       triggerDownload(pdfBytes, store.document.fileName.replace(/\.pdf$/i, '') + '_edited.pdf');
 

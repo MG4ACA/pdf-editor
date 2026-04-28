@@ -29,6 +29,8 @@ export interface PdfDocumentState {
 
 interface HistoryEntry {
   annotations: AnnotationObject[];
+  deletedPages: number[];
+  currentPage: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -68,6 +70,9 @@ export const useEditorStore = defineStore('editor', {
     // Incremented on every undo/redo so PdfCanvas can watch only those changes
     _undoRedoVersion: 0,
 
+    // Pages deleted by the user (original 1-based page numbers)
+    deletedPages: [] as number[],
+
     // UI state
     isLoading: false,
     loadingMessage: '',
@@ -86,6 +91,20 @@ export const useEditorStore = defineStore('editor', {
 
     totalPages: (state) => state.document?.totalPages ?? 0,
     currentPage: (state) => state.document?.currentPage ?? 1,
+
+    /** All original page numbers that are still visible (not deleted) */
+    visiblePages: (state): number[] => {
+      const total = state.document?.totalPages ?? 0;
+      return Array.from({ length: total }, (_, i) => i + 1).filter(
+        (p) => !state.deletedPages.includes(p),
+      );
+    },
+
+    /** Count of visible (non-deleted) pages */
+    visiblePageCount: (state): number => {
+      const total = state.document?.totalPages ?? 0;
+      return total - state.deletedPages.length;
+    },
   },
 
   actions: {
@@ -96,6 +115,7 @@ export const useEditorStore = defineStore('editor', {
     loadDocument(payload: Omit<PdfDocumentState, 'currentPage'>) {
       this.document = { ...payload, currentPage: 1 };
       this.annotations = [];
+      this.deletedPages = [];
       this._past = [];
       this._future = [];
       this.activeTool = 'select';
@@ -104,6 +124,7 @@ export const useEditorStore = defineStore('editor', {
     closeDocument() {
       this.document = null;
       this.annotations = [];
+      this.deletedPages = [];
       this._past = [];
       this._future = [];
     },
@@ -163,7 +184,11 @@ export const useEditorStore = defineStore('editor', {
     // -----------------------------------------------------------------------
 
     _snapshot() {
-      this._past.push({ annotations: JSON.parse(JSON.stringify(this.annotations)) });
+      this._past.push({
+        annotations: JSON.parse(JSON.stringify(this.annotations)),
+        deletedPages: [...this.deletedPages],
+        currentPage: this.document?.currentPage ?? 1,
+      });
       // Clear redo stack on new action
       this._future = [];
       // Keep history bounded to 50 entries
@@ -210,18 +235,55 @@ export const useEditorStore = defineStore('editor', {
 
     undo() {
       if (this._past.length === 0) return;
-      this._future.push({ annotations: JSON.parse(JSON.stringify(this.annotations)) });
+      this._future.push({
+        annotations: JSON.parse(JSON.stringify(this.annotations)),
+        deletedPages: [...this.deletedPages],
+        currentPage: this.document?.currentPage ?? 1,
+      });
       const prev = this._past.pop()!;
       this.annotations = prev.annotations;
+      this.deletedPages = prev.deletedPages;
+      if (this.document) this.document.currentPage = prev.currentPage;
       this._undoRedoVersion++;
     },
 
     redo() {
       if (this._future.length === 0) return;
-      this._past.push({ annotations: JSON.parse(JSON.stringify(this.annotations)) });
+      this._past.push({
+        annotations: JSON.parse(JSON.stringify(this.annotations)),
+        deletedPages: [...this.deletedPages],
+        currentPage: this.document?.currentPage ?? 1,
+      });
       const next = this._future.pop()!;
       this.annotations = next.annotations;
+      this.deletedPages = next.deletedPages;
+      if (this.document) this.document.currentPage = next.currentPage;
       this._undoRedoVersion++;
+    },
+
+    /**
+     * Mark the current page as deleted and navigate to the nearest visible page.
+     * Cannot delete the last remaining page.
+     */
+    deletePage(pageNum: number) {
+      if (!this.document) return;
+      if (this.deletedPages.includes(pageNum)) return;
+      // Prevent deleting the last visible page
+      const total = this.document.totalPages;
+      const remainingCount = total - this.deletedPages.length;
+      if (remainingCount <= 1) return;
+
+      this._snapshot();
+      this.deletedPages = [...this.deletedPages, pageNum];
+
+      // Navigate to the nearest remaining visible page
+      const visible = Array.from({ length: total }, (_, i) => i + 1).filter(
+        (p) => !this.deletedPages.includes(p),
+      );
+      const nextPage = visible.find((p) => p > pageNum) ?? visible[visible.length - 1];
+      if (nextPage !== undefined) {
+        this.document.currentPage = nextPage;
+      }
     },
 
     // -----------------------------------------------------------------------

@@ -37,20 +37,20 @@
     <div v-if="store.hasDocument" class="mt-4 flex items-center gap-3">
       <button
         class="btn-secondary px-3 py-1.5 text-xs"
-        :disabled="store.currentPage <= 1"
+        :disabled="currentDisplayPage <= 1"
         @click="prevPage"
       >
         ← Prev
       </button>
       <span class="text-sm text-gray-600">
         Page
-        <strong>{{ store.currentPage }}</strong>
+        <strong>{{ currentDisplayPage }}</strong>
         of
-        <strong>{{ store.totalPages }}</strong>
+        <strong>{{ store.visiblePageCount }}</strong>
       </span>
       <button
         class="btn-secondary px-3 py-1.5 text-xs"
-        :disabled="store.currentPage >= store.totalPages"
+        :disabled="currentDisplayPage >= store.visiblePageCount"
         @click="nextPage"
       >
         Next →
@@ -355,7 +355,13 @@ async function initFabricCanvas(cssWidth: number, cssHeight: number, page: numbe
       fabricModule!.util.enlivenObjects(
         [annotation.fabricJson],
         (objects: fabric.Object[]) => {
-          objects.forEach((obj) => fabricCanvas!.add(obj));
+          objects.forEach((obj) => {
+            // Ensure text objects are always editable after rehydration
+            if (obj.type === 'i-text' || obj.type === 'text') {
+              (obj as InstanceType<FabricLib['IText']>).editable = true;
+            }
+            fabricCanvas!.add(obj);
+          });
           resolve();
         },
         'fabric',
@@ -416,7 +422,12 @@ async function reloadCanvasAnnotations(page: number) {
       fabricModule!.util.enlivenObjects(
         [annotation.fabricJson],
         (objects: fabric.Object[]) => {
-          objects.forEach((obj) => fabricCanvas!.add(obj));
+          objects.forEach((obj) => {
+            if (obj.type === 'i-text' || obj.type === 'text') {
+              (obj as InstanceType<FabricLib['IText']>).editable = true;
+            }
+            fabricCanvas!.add(obj);
+          });
           resolve();
         },
         'fabric',
@@ -444,9 +455,16 @@ async function reloadCanvasAnnotations(page: number) {
 
 // ─── Tool mode application ───────────────────────────────────────────────────
 
+// Track double-click state for select-mode text editing
+let _lastClickTime = 0;
+let _lastClickTarget: fabric.Object | null = null;
+
 // Keep track of canvas event listeners so we can remove them on tool change
 function removeToolListeners() {
   fabricCanvas?.off('mouse:down');
+  fabricCanvas?.off('mouse:dblclick');
+  _lastClickTime = 0;
+  _lastClickTarget = null;
 }
 
 function applyToolMode(tool: string) {
@@ -499,6 +517,24 @@ function applyToolMode(tool: string) {
       fabricCanvas.forEachObject((obj) => {
         obj.selectable = true;
         obj.evented = true;
+        // Ensure rehydrated text objects remain editable
+        if (obj.type === 'i-text' || obj.type === 'text') {
+          (obj as InstanceType<FabricLib['IText']>).editable = true;
+        }
+      });
+      // Manual double-click detection: mouse:down is reliable in all Fabric v5 builds
+      fabricCanvas.on('mouse:down', (opt) => {
+        if (!fabricCanvas) return;
+        const target = opt.target;
+        const now = Date.now();
+        const isDoubleClick = now - _lastClickTime < 400 && target === _lastClickTarget;
+        _lastClickTime = now;
+        _lastClickTarget = target ?? null;
+        if (isDoubleClick && target && (target.type === 'i-text' || target.type === 'text')) {
+          fabricCanvas.setActiveObject(target);
+          (target as InstanceType<FabricLib['IText']>).enterEditing();
+          fabricCanvas.renderAll();
+        }
       });
       fabricCanvas.renderAll();
       break;
@@ -633,6 +669,7 @@ async function exportAllPageAnnotations(): Promise<Map<number, string>> {
   const totalPages = store.document?.totalPages ?? 0;
 
   for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+    if (store.deletedPages.includes(pageNum)) continue;
     const pageAnnotations = store.annotations.filter((a) => a.page === pageNum);
     if (pageAnnotations.length === 0) continue;
 
@@ -696,11 +733,21 @@ async function logEditEvent(action: string) {
 
 // ─── Navigation helpers ───────────────────────────────────────────────────────
 
+const currentDisplayPage = computed(() => {
+  const idx = store.visiblePages.indexOf(store.currentPage);
+  return idx >= 0 ? idx + 1 : 1;
+});
+
 function prevPage() {
-  store.setCurrentPage(store.currentPage - 1);
+  const visible = store.visiblePages;
+  const idx = visible.indexOf(store.currentPage);
+  if (idx > 0) store.setCurrentPage(visible[idx - 1]);
 }
+
 function nextPage() {
-  store.setCurrentPage(store.currentPage + 1);
+  const visible = store.visiblePages;
+  const idx = visible.indexOf(store.currentPage);
+  if (idx >= 0 && idx < visible.length - 1) store.setCurrentPage(visible[idx + 1]);
 }
 </script>
 

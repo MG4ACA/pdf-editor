@@ -135,6 +135,17 @@
       <span>Redo</span>
     </button>
 
+    <!-- Delete current page -->
+    <button
+      class="tool-btn text-red-600 hover:bg-red-50"
+      :disabled="!store.hasDocument || store.visiblePageCount <= 1"
+      title="Delete current page"
+      @click="emit('delete-page')"
+    >
+      <IconTrash class="h-5 w-5" />
+      <span>Delete</span>
+    </button>
+
     <!-- Save -->
     <button
       class="tool-btn text-green-700 hover:bg-green-50"
@@ -161,6 +172,7 @@ const emit = defineEmits<{
   (e: 'undo'): void;
   (e: 'redo'): void;
   (e: 'signature-image', dataUrl: string): void;
+  (e: 'delete-page'): void;
 }>();
 
 function onFileChange(event: Event) {
